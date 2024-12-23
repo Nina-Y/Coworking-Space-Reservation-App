@@ -1,4 +1,4 @@
-package com.example.coworking;
+package com.example.coworking.model;
 
 public class Reservation {
 

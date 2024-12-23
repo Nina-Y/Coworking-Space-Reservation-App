@@ -1,4 +1,4 @@
-package com.example.coworking;
+package com.example.coworking.model;
 
 public class Workspace {
     private int id;
@@ -28,6 +28,6 @@ public class Workspace {
         return "Workspace: " +
                 "id: " + id +
                 ", type: " + type +
-                ", price for 1h: " + price;
+                ", price for 1h: EUR " + price;
     }
 }
