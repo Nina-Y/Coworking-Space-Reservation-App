@@ -9,15 +9,15 @@ import java.util.Map;
 import java.util.Scanner;
 
 public class AdminService {
-    private final List<Workspace> workspaces;
-    private final Map<String, Integer> workspaceCounts;
-    private final List<Reservation> reservations;
+    private final List<Workspace> WORKSPACES;
+    private final Map<String, Integer> WORKSPACE_COUNTS;
+    private final List<Reservation> RESERVATIONS;
     private int nextWorkspaceId;
 
-    public AdminService(List<Workspace> workspaces, Map<String, Integer> workspaceCounts, List<Reservation> reservations, int nextWorkspaceId) {
-        this.workspaces = workspaces;
-        this.workspaceCounts = workspaceCounts;
-        this.reservations = reservations;
+    public AdminService(List<Workspace> WORKSPACES, Map<String, Integer> WORKSPACE_COUNTS, List<Reservation> RESERVATIONS, int nextWorkspaceId) {
+        this.WORKSPACES = WORKSPACES;
+        this.WORKSPACE_COUNTS = WORKSPACE_COUNTS;
+        this.RESERVATIONS = RESERVATIONS;
         this.nextWorkspaceId = nextWorkspaceId;
     }
 
@@ -55,7 +55,7 @@ public class AdminService {
         int id = getValidatedIntInput(scanner);
 
         Workspace toRemove = null;
-        for (Workspace workspace : workspaces) {
+        for (Workspace workspace : WORKSPACES) {
             if (workspace.getId() == id) {
                 toRemove = workspace;
                 break;
@@ -63,8 +63,8 @@ public class AdminService {
         }
 
         if (toRemove != null) {
-            workspaces.remove(toRemove);
-            workspaceCounts.put(toRemove.getType(), workspaceCounts.get(toRemove.getType()) - 1);
+            WORKSPACES.remove(toRemove);
+            WORKSPACE_COUNTS.put(toRemove.getType(), WORKSPACE_COUNTS.get(toRemove.getType()) - 1);
             System.out.println("Workspace removed successfully!");
         } else {
             System.out.println("Workspace ID not found.");
@@ -73,10 +73,10 @@ public class AdminService {
     }
 
     public void viewAllReservations() {
-        if (reservations.isEmpty()) {
+        if (RESERVATIONS.isEmpty()) {
             System.out.println("No reservations found.\n");
         } else {
-            for (Reservation reservation : reservations) {
+            for (Reservation reservation : RESERVATIONS) {
                 System.out.println(reservation);
             }
             System.out.println();
@@ -96,9 +96,9 @@ public class AdminService {
 
     public void addWorkspaceToInventory(String type, double price, int quantity) {
         for (int i = 0; i < quantity; i++) {
-            workspaces.add(new Workspace(nextWorkspaceId++, type, price));
+            WORKSPACES.add(new Workspace(nextWorkspaceId++, type, price));
         }
-        workspaceCounts.put(type, workspaceCounts.getOrDefault(type, 0) + quantity);
+        WORKSPACE_COUNTS.put(type, WORKSPACE_COUNTS.getOrDefault(type, 0) + quantity);
     }
 }
 

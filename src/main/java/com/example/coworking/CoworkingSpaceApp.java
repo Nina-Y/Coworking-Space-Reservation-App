@@ -9,20 +9,20 @@ import java.util.*;
 
 public class  CoworkingSpaceApp {
 
-    private static final List<Workspace> workspaces = new ArrayList<>();
-    private static final List<Reservation> reservations = new ArrayList<>();
-    private static final Map<String, String> userCredentials = new HashMap<>();
-    private static final Map<String, Integer> workspaceCounts = new HashMap<>();
+    private static final List<Workspace> WORKSPACES = new ArrayList<>();
+    private static final List<Reservation> RESERVATIONS = new ArrayList<>();
+    private static final Map<String, String> USER_CREDENTIALS = new HashMap<>();
+    private static final Map<String, Integer> WORKSPACE_COUNTS = new HashMap<>();
     private static int nextWorkspaceId = 1;
     private static int nextReservationId = 1;
 
     public static void main(String[] args) {
         Scanner scanner = new Scanner(System.in);
 
-        userCredentials.put("admin", "admin123");
+        USER_CREDENTIALS.put("admin", "admin123");
 
-        AdminService adminService = new AdminService(workspaces, workspaceCounts, reservations, nextWorkspaceId);
-        CustomerService customerService = new CustomerService(workspaces, workspaceCounts, reservations, nextReservationId);
+        AdminService adminService = new AdminService(WORKSPACES, WORKSPACE_COUNTS, RESERVATIONS, nextWorkspaceId);
+        CustomerService customerService = new CustomerService(WORKSPACES, WORKSPACE_COUNTS, RESERVATIONS, nextReservationId);
 
         adminService.addWorkspaceToInventory("Open Space", 5.0, 5);
         adminService.addWorkspaceToInventory("Private Desk", 8.0, 3);
@@ -32,12 +32,14 @@ public class  CoworkingSpaceApp {
 
         boolean isRunning = true;
         while (isRunning) {
-            System.out.println("\nWelcome to Coworking Space Reservation App");
-            System.out.println("1. Admin Login");
-            System.out.println("2. Customer Login");
-            System.out.println("3. Customer Registration");
-            System.out.println("4. Exit");
-            System.out.print("Choose an option: ");
+            System.out.println("""
+                \nWelcome to Coworking Space Reservation App
+                1. Admin Login
+                2. Customer Login
+                3. Customer Registration
+                4. Exit
+                Choose an option:
+                """.trim());
 
             int choice = getValidatedIntInput(scanner);
             scanner.nextLine();
@@ -76,7 +78,7 @@ public class  CoworkingSpaceApp {
         System.out.print("Enter password: ");
         String password = scanner.nextLine();
 
-        return userCredentials.containsKey(username) && userCredentials.get(username).equals(password) &&
+        return USER_CREDENTIALS.containsKey(username) && USER_CREDENTIALS.get(username).equals(password) &&
                 ((userType.equals("admin") && username.equals("admin")) ||
                  (userType.equals("customer") && !username.equals("admin")));
     }
@@ -89,7 +91,7 @@ public class  CoworkingSpaceApp {
             return;
         }
 
-        if (userCredentials.containsKey(username)) {
+        if (USER_CREDENTIALS.containsKey(username)) {
             System.out.println("Username already exists. Please choose a different username.");
             return;
         }
@@ -100,8 +102,8 @@ public class  CoworkingSpaceApp {
             System.out.println("Password must be at least 6 characters long.");
             return;
         }
-        userCredentials.put(username, password);
-        System.out.println("Registration successful! You can now log in as a customer.");
+        USER_CREDENTIALS.put(username, password);
+        System.out.println("Registration successful! You can now log in as a customer\n.");
     }
 
     private static void adminMenu(Scanner scanner, AdminService adminService) {
@@ -109,11 +111,13 @@ public class  CoworkingSpaceApp {
 
         boolean isRunning = true;
         while (isRunning) {
-            System.out.println("1. Add a new coworking space");
-            System.out.println("2. Remove a coworking space");
-            System.out.println("3. View all reservations");
-            System.out.println("4. Back to Main Menu");
-            System.out.print("Choose an option: ");
+            System.out.println("""
+                \n1. Add a new coworking space
+                2. Remove a coworking space
+                3. View all RESERVATIONS
+                4. Back to Main Menu
+                Choose an option:
+                """.trim());
 
             int choice = getValidatedIntInput(scanner);
             scanner.nextLine();
@@ -142,12 +146,14 @@ public class  CoworkingSpaceApp {
 
         boolean isRunning = true;
         while (isRunning) {
-            System.out.println("1. Browse available spaces");
-            System.out.println("2. Make a reservation");
-            System.out.println("3. View my reservations");
-            System.out.println("4. Cancel a reservation");
-            System.out.println("5. Back to Main Menu");
-            System.out.print("Choose an option: ");
+            System.out.println("""
+                \n1. Browse available spaces
+                2. Make a reservation
+                3. View my RESERVATIONS
+                4. Cancel a reservation
+                5. Back to Main Menu
+                Choose an option:
+                """.trim());
 
             int choice = getValidatedIntInput(scanner);
             scanner.nextLine();

@@ -10,22 +10,22 @@ import java.util.Map;
 import java.util.Scanner;
 
 public class CustomerService {
-    private final List<Workspace> workspaces;
-    private final Map<String, Integer> workspaceCounts;
-    private final List<Reservation> reservations;
+    private final List<Workspace> WORKSPACES;
+    private final Map<String, Integer> WORKSPACE_COUNTS;
+    private final List<Reservation> RESERVATIONS;
     private int nextReservationId;
 
-    public CustomerService(List<Workspace> workspaces, Map<String, Integer> workspaceCounts, List<Reservation> reservations, int nextReservationId) {
-        this.workspaces = workspaces;
-        this.workspaceCounts = workspaceCounts;
-        this.reservations = reservations;
+    public CustomerService(List<Workspace> WORKSPACES, Map<String, Integer> WORKSPACE_COUNTS, List<Reservation> RESERVATIONS, int nextReservationId) {
+        this.WORKSPACES = WORKSPACES;
+        this.WORKSPACE_COUNTS = WORKSPACE_COUNTS;
+        this.RESERVATIONS = RESERVATIONS;
         this.nextReservationId = nextReservationId;
     }
 
     public void browseSpaces() {
         System.out.println("\nAvailable Workspaces:");
-        for (String type : workspaceCounts.keySet()) {
-            System.out.println(type + ": " + workspaceCounts.get(type) + " available");
+        for (String type : WORKSPACE_COUNTS.keySet()) {
+            System.out.println(type + ": " + WORKSPACE_COUNTS.get(type) + " available");
         }
         System.out.println();
     }
@@ -40,7 +40,7 @@ public class CustomerService {
 
         System.out.print("Enter workspace type to book (Open Space/ Private Desk/ Private Room/ Meeting Room/ Event Space): ");
         String type = scanner.nextLine();
-        if (!workspaceCounts.containsKey(type)) {
+        if (!WORKSPACE_COUNTS.containsKey(type)) {
             System.out.println("Invalid workspace type. Please choose a valid option.");
             return;
         }
@@ -62,9 +62,9 @@ public class CustomerService {
             return;
         }
 
-        if (workspaceCounts.getOrDefault(type, 0) > 0) {
+        if (WORKSPACE_COUNTS.getOrDefault(type, 0) > 0) {
             Workspace reservedWorkspace = null;
-            for (Workspace workspace : workspaces) {
+            for (Workspace workspace : WORKSPACES) {
                 if (workspace.getType().equals(type)) {
                     reservedWorkspace = workspace;
                     break;
@@ -75,7 +75,7 @@ public class CustomerService {
                 int durationHours = endHour - startHour;
                 double totalPrice = durationHours * reservedWorkspace.getPrice();
 
-                reservations.add(new Reservation(
+                RESERVATIONS.add(new Reservation(
                         nextReservationId++,
                         reservedWorkspace.getId(),
                         type,
@@ -85,7 +85,7 @@ public class CustomerService {
                         endHour + ":00",
                         totalPrice
                 ));
-                workspaceCounts.put(type, workspaceCounts.get(type) - 1);
+                WORKSPACE_COUNTS.put(type, WORKSPACE_COUNTS.get(type) - 1);
                 System.out.println("Reservation successful!");
                 System.out.printf("You have reserved the space for %d hours. Total price: $%.2f%n%n", durationHours, totalPrice);
             }
@@ -95,7 +95,7 @@ public class CustomerService {
     }
 
     public void viewCustomerReservations(String customerName) {
-        for (Reservation reservation : reservations) {
+        for (Reservation reservation : RESERVATIONS) {
             if (reservation.getCustomerName().equals(customerName)) {
                 System.out.println(reservation);
             }
@@ -107,7 +107,7 @@ public class CustomerService {
         int reservationId = getValidatedIntInput(scanner);
 
         Reservation toCancel = null;
-        for (Reservation reservation : reservations) {
+        for (Reservation reservation : RESERVATIONS) {
             if (reservation.getId() == reservationId) {
                 toCancel = reservation;
                 break;
@@ -115,10 +115,10 @@ public class CustomerService {
         }
 
         if (toCancel != null) {
-            reservations.remove(toCancel);
-            for (Workspace workspace : workspaces) {
+            RESERVATIONS.remove(toCancel);
+            for (Workspace workspace : WORKSPACES) {
                 if (workspace.getId() == toCancel.getWorkspaceId()) {
-                    workspaceCounts.put(workspace.getType(), workspaceCounts.get(workspace.getType()) + 1);
+                    WORKSPACE_COUNTS.put(workspace.getType(), WORKSPACE_COUNTS.get(workspace.getType()) + 1);
                 }
             }
             System.out.println("Reservation cancelled successfully!");
