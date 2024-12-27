@@ -1,5 +1,6 @@
 package com.example.coworking;
 
+import com.example.coworking.io.FileUtil;
 import com.example.coworking.model.Reservation;
 import com.example.coworking.model.Workspace;
 import com.example.coworking.service.AdminService;
@@ -13,8 +14,9 @@ public class  CoworkingSpaceApp {
     private static final List<Reservation> RESERVATIONS = new ArrayList<>();
     private static final Map<String, String> USER_CREDENTIALS = new HashMap<>();
     private static final Map<String, Integer> WORKSPACE_COUNTS = new HashMap<>();
-    private static int nextWorkspaceId = 1;
+    private static int nextWorkspaceId = 6;
     private static int nextReservationId = 1;
+    private static final String WORKSPACES_FILE = "src/main/java/com/example/coworking/io/workspaces.txt";
 
     public static void main(String[] args) {
         Scanner scanner = new Scanner(System.in);
@@ -24,11 +26,7 @@ public class  CoworkingSpaceApp {
         AdminService adminService = new AdminService(WORKSPACES, WORKSPACE_COUNTS, RESERVATIONS, nextWorkspaceId);
         CustomerService customerService = new CustomerService(WORKSPACES, WORKSPACE_COUNTS, RESERVATIONS, nextReservationId);
 
-        adminService.addWorkspaceToInventory("Open Space", 5.0, 5);
-        adminService.addWorkspaceToInventory("Private Desk", 8.0, 3);
-        adminService.addWorkspaceToInventory("Private Room", 20.0, 2);
-        adminService.addWorkspaceToInventory("Meeting Room", 30.0, 1);
-        adminService.addWorkspaceToInventory("Event Space", 50.0, 1);
+        FileUtil.loadWorkspacesFromFile(WORKSPACES, WORKSPACE_COUNTS, WORKSPACES_FILE);
 
         boolean isRunning = true;
         while (isRunning) {
@@ -37,7 +35,8 @@ public class  CoworkingSpaceApp {
                 1. Admin Login
                 2. Customer Login
                 3. Customer Registration
-                4. Exit
+                4. Store state in a file
+                5. Exit
                 Choose an option:
                 """.trim());
 
@@ -63,12 +62,42 @@ public class  CoworkingSpaceApp {
                     registerCustomer(scanner);
                     break;
                 case 4:
+                    manageState(scanner);
+                    break;
+                case 5:
+                    FileUtil.saveWorkspacesToFile(WORKSPACES_FILE, WORKSPACES);
                     System.out.println("Goodbye!");
                     isRunning = false;
                     break;
                 default:
                     System.out.println("Invalid choice. Please try again.");
             }
+        }
+    }
+
+    private static void manageState(Scanner scanner) {
+        System.out.println("""
+            \nState Menu
+            1. Save Current State (file)
+            2. View Current State (ArrayList)
+            3. Back to Main Menu
+            Choose an option:
+            """.trim());
+
+        int choice = getValidatedIntInput(scanner);
+        scanner.nextLine();
+
+        switch (choice) {
+            case 1 -> {
+                FileUtil.saveWorkspacesToFile(WORKSPACES_FILE, WORKSPACES);
+                System.out.println("Current state saved successfully!");
+            }
+            case 2 -> {
+                System.out.println("Current State of Workspaces:");
+                WORKSPACES.forEach(System.out::println);
+            }
+            case 3 -> System.out.println("Returning to Main Menu");
+            default -> System.out.println("Invalid choice. Please try again.");
         }
     }
 

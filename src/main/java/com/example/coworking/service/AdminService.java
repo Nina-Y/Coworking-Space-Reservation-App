@@ -1,12 +1,10 @@
 package com.example.coworking.service;
 
+import com.example.coworking.InvalidWorkspaceException;
 import com.example.coworking.model.Reservation;
 import com.example.coworking.model.Workspace;
 
-import java.util.InputMismatchException;
-import java.util.List;
-import java.util.Map;
-import java.util.Scanner;
+import java.util.*;
 
 public class AdminService {
     private final List<Workspace> WORKSPACES;
@@ -62,13 +60,13 @@ public class AdminService {
             }
         }
 
-        if (toRemove != null) {
-            WORKSPACES.remove(toRemove);
-            WORKSPACE_COUNTS.put(toRemove.getType(), WORKSPACE_COUNTS.get(toRemove.getType()) - 1);
-            System.out.println("Workspace removed successfully!");
-        } else {
-            System.out.println("Workspace ID not found.");
+        if (toRemove == null) {
+            throw new InvalidWorkspaceException("Workspace with ID " + id + " does not exist.");
         }
+
+        WORKSPACES.remove(toRemove);
+        WORKSPACE_COUNTS.put(toRemove.getType(), WORKSPACE_COUNTS.get(toRemove.getType()) - 1);
+        System.out.println("Workspace removed successfully!");
         System.out.println();
     }
 

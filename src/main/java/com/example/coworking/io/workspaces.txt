@@ -1,0 +1,4 @@
+1,Open Space,5.0
+2,Private Desk,8.0
+4,Meeting Room,30.0
+5,Event Space,50.0
