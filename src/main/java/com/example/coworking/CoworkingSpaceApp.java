@@ -1,5 +1,6 @@
 package com.example.coworking;
 
+import com.example.coworking.classLoader.CustomClassLoader;
 import com.example.coworking.io.FileUtil;
 import com.example.coworking.model.Reservation;
 import com.example.coworking.model.Workspace;
@@ -19,6 +20,9 @@ public class  CoworkingSpaceApp {
     private static final String WORKSPACES_FILE = "src/main/java/com/example/coworking/io/workspaces.txt";
 
     public static void main(String[] args) {
+
+        runCustomClassLoader();
+
         Scanner scanner = new Scanner(System.in);
 
         USER_CREDENTIALS.put("admin", "admin123");
@@ -72,6 +76,21 @@ public class  CoworkingSpaceApp {
                 default:
                     System.out.println("Invalid choice. Please try again.");
             }
+        }
+    }
+
+    public static void runCustomClassLoader() {
+        try {
+            String classDir = "./";
+            CustomClassLoader loader = new CustomClassLoader(classDir);
+
+            Class<?> classToLoad = loader.loadClass("com.example.coworking.classLoader.ClassForCustomClassLoader");
+
+            Object instance = classToLoad.getDeclaredConstructor().newInstance();
+
+            classToLoad.getMethod("showWelcomeMessage").invoke(instance);
+        }   catch (Exception e) {
+            e.printStackTrace();
         }
     }
 
