@@ -25,9 +25,6 @@ public class CustomerService {
 
     public void browseSpaces() {
         System.out.println("\nAvailable Workspaces:");
-        /*for (String type : WORKSPACE_COUNTS.keySet()) {
-            System.out.println(type + ": " + WORKSPACE_COUNTS.get(type) + " available");
-        }*/
         PrintUtil.printMap(WORKSPACE_COUNTS, "%s: %d available%n");
         System.out.println();
     }
