@@ -3,6 +3,7 @@ package com.example.coworking.service;
 import com.example.coworking.InvalidWorkspaceException;
 import com.example.coworking.model.Reservation;
 import com.example.coworking.model.Workspace;
+import com.example.coworking.util.PrintUtil;
 
 import java.util.*;
 
@@ -74,9 +75,7 @@ public class AdminService {
         if (RESERVATIONS.isEmpty()) {
             System.out.println("No reservations found.\n");
         } else {
-            for (Reservation reservation : RESERVATIONS) {
-                System.out.println(reservation);
-            }
+            PrintUtil.printList(RESERVATIONS);
             System.out.println();
         }
     }
