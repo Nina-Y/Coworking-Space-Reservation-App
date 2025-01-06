@@ -94,11 +94,10 @@ public class CustomerService {
     }
 
     public void viewCustomerReservations(String customerName) {
-        for (Reservation reservation : RESERVATIONS) {
-            if (reservation.getCustomerName().equals(customerName)) {
-                System.out.println(reservation);
-            }
-        }
+
+        RESERVATIONS.stream()
+                .filter(reservation -> reservation.getCustomerName().equals(customerName))
+                .forEach(System.out::println);
     }
 
     public void cancelReservation(Scanner scanner) {

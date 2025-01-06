@@ -3,6 +3,7 @@ package com.example.coworking.service;
 import com.example.coworking.InvalidWorkspaceException;
 import com.example.coworking.model.Reservation;
 import com.example.coworking.model.Workspace;
+import com.example.coworking.util.Action;
 import com.example.coworking.util.PrintUtil;
 
 import java.util.*;
@@ -53,22 +54,17 @@ public class AdminService {
         System.out.print("Enter the ID of the workspace to remove: ");
         int id = getValidatedIntInput(scanner);
 
-        Workspace toRemove = null;
-        for (Workspace workspace : WORKSPACES) {
-            if (workspace.getId() == id) {
-                toRemove = workspace;
-                break;
-            }
-        }
+        Optional<Workspace> toRemove = WORKSPACES.stream()
+                .filter(workspace -> workspace.getId() == id)
+                .findFirst();
 
-        if (toRemove == null) {
-            throw new InvalidWorkspaceException("Workspace with ID " + id + " does not exist.");
+        if (toRemove.isPresent()) {
+            WORKSPACES.remove(toRemove.get());
+            WORKSPACE_COUNTS.put(toRemove.get().getType(), WORKSPACE_COUNTS.get(toRemove.get().getType()) - 1);
+            System.out.println("Workspace removed successfully!");
+        } else {
+            System.out.println("Workspace ID not found.");
         }
-
-        WORKSPACES.remove(toRemove);
-        WORKSPACE_COUNTS.put(toRemove.getType(), WORKSPACE_COUNTS.get(toRemove.getType()) - 1);
-        System.out.println("Workspace removed successfully!");
-        System.out.println();
     }
 
     public void viewAllReservations() {
@@ -78,6 +74,10 @@ public class AdminService {
             PrintUtil.printList(RESERVATIONS);
             System.out.println();
         }
+    }
+
+    public void applyDiscount(Action<Workspace> action) {
+        WORKSPACES.forEach(action::apply);
     }
 
     private int getValidatedIntInput(Scanner scanner) {

@@ -163,7 +163,8 @@ public class  CoworkingSpaceApp {
                 \n1. Add a new coworking space
                 2. Remove a coworking space
                 3. View all RESERVATIONS
-                4. Back to Main Menu
+                4. Set 10% discount for all spaces
+                5. Back to Main Menu
                 Choose an option:
                 """.trim());
 
@@ -181,6 +182,9 @@ public class  CoworkingSpaceApp {
                     adminService.viewAllReservations();
                     break;
                 case 4:
+                    adminService.applyDiscount(workspace -> workspace.setPrice(workspace.getPrice() * 0.9));
+                    break;
+                    case 5:
                     isRunning = false;
                     break;
                 default:
