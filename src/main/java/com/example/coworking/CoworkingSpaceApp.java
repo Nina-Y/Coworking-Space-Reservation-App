@@ -18,6 +18,7 @@ public class  CoworkingSpaceApp {
     private static int nextWorkspaceId = 6;
     private static int nextReservationId = 1;
     private static final String WORKSPACES_FILE = "src/main/java/com/example/coworking/io/workspaces.txt";
+    private static final double DISCOUNT = 0.9;
 
     public static void main(String[] args) {
 
@@ -163,7 +164,8 @@ public class  CoworkingSpaceApp {
                 \n1. Add a new coworking space
                 2. Remove a coworking space
                 3. View all RESERVATIONS
-                4. Back to Main Menu
+                4. Set 10% discount for all spaces
+                5. Back to Main Menu
                 Choose an option:
                 """.trim());
 
@@ -181,6 +183,9 @@ public class  CoworkingSpaceApp {
                     adminService.viewAllReservations();
                     break;
                 case 4:
+                    adminService.applyDiscount(workspace -> workspace.setPrice(workspace.getPrice() * DISCOUNT));
+                    break;
+                    case 5:
                     isRunning = false;
                     break;
                 default:
