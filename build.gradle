@@ -1,0 +1,15 @@
+plugins {
+    id 'java'
+}
+
+group = 'com.example.coworking'
+version = '1.0-SNAPSHOT'
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_22
+    targetCompatibility = JavaVersion.VERSION_22
+}
+
+repositories {
+    mavenCentral()
+}
