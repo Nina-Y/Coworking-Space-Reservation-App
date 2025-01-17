@@ -34,6 +34,22 @@ public class Reservation {
         return customerName;
     }
 
+    public String getType() {
+        return type;
+    }
+
+    public String getDate() {
+        return date;
+    }
+
+    public String getStartTime() {
+        return startTime;
+    }
+
+    public String getEndTime() {
+        return endTime;
+    }
+
     @Override
     public String toString() {
         return "Reservation: " +
