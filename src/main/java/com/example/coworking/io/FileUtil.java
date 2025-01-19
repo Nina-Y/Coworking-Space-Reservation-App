@@ -1,68 +1,48 @@
 package com.example.coworking.io;
 
-import com.example.coworking.model.Workspace;
-
+import com.example.coworking.util.DBUtil;
 import java.io.*;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.sql.*;
 
 public class FileUtil {
 
-    public static void loadWorkspacesFromFile(List<Workspace> workspaces, Map<String, Integer> workspaceCounts, String filePath) {
-        List<Workspace> loadedWorkspaces = new ArrayList<>();
-        File file = new File(filePath);
+    public static void storeStateInFile(String workspacesFile, String reservationsFile) {
+        try (Connection connection = DBUtil.getConnection()) {
+            try (PreparedStatement workspacesStmt = connection.prepareStatement("SELECT id, type, price, status FROM workspaces");
+                 ResultSet workspacesRs = workspacesStmt.executeQuery();
+                 PrintWriter workspacesWriter = new PrintWriter(new FileWriter(workspacesFile))) {
 
-        if (!file.exists()) {
-            System.out.println("The file does not exist");
-        }
-
-        if (file.length() == 0) {
-            System.out.println("The file is empty.");
-            writeDummyData(filePath);
-            System.out.println("Populating with dummy data.\n");
-        }
-
-        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                String[] parts = line.split(",");
-                int id = Integer.parseInt(parts[0]);
-                String type = parts[1];
-                double price = Double.parseDouble(parts[2]);
-                loadedWorkspaces.add(new Workspace(id, type, price));
+                while (workspacesRs.next()) {
+                    int id = workspacesRs.getInt("id");
+                    String type = workspacesRs.getString("type");
+                    double price = workspacesRs.getDouble("price");
+                    String status = workspacesRs.getString("status");
+                    workspacesWriter.printf("%d,%s,%.2f,%s%n", id, type, price, status);
+                }
             }
-        }   catch (IOException | NumberFormatException e) {
-            System.err.println("Error reading workspaces from file: " + e.getMessage());
-            System.out.println();
-        }
 
-        workspaces.addAll(loadedWorkspaces);
+            try (PreparedStatement reservationsStmt = connection.prepareStatement("SELECT * FROM reservations");
+                 ResultSet reservationsRs = reservationsStmt.executeQuery();
+                 PrintWriter reservationsWriter = new PrintWriter(new FileWriter(reservationsFile))) {
 
-        for (Workspace workspace : loadedWorkspaces) {
-            workspaceCounts.put(workspace.getType(), workspaceCounts.getOrDefault(workspace.getType(), 0) + 1);
-        }
-    }
+                while (reservationsRs.next()) {
+                    int id = reservationsRs.getInt("id");
+                    int workspaceId = reservationsRs.getInt("workspace_id");
+                    String type = reservationsRs.getString("type");
+                    String customerName = reservationsRs.getString("customer_name");
+                    Date date = reservationsRs.getDate("date");
+                    Time startTime = reservationsRs.getTime("start_time");
+                    Time endTime = reservationsRs.getTime("end_time");
+                    double totalPrice = reservationsRs.getDouble("total_price");
 
-    public static void saveWorkspacesToFile(String filePath, List<Workspace> workspaces) {
-        try (PrintWriter writer = new PrintWriter(new FileWriter(filePath))) {
-            for (Workspace workspace : workspaces) {
-                writer.println(workspace.getId() + "," + workspace.getType() + "," + workspace.getPrice());
+                    reservationsWriter.printf("%d,%d,%s,%s,%s,%s,%s,%.2f%n",
+                            id, workspaceId, type, customerName, date, startTime, endTime, totalPrice);
+                }
             }
-        } catch (IOException e) {
-            System.err.println("Error saving workspaces to file: " + e.getMessage());
-            System.out.println();
-        }
-    }
 
-    public static void writeDummyData(String filePath) {
-        List<Workspace> dummyWorkspaces = List.of(
-                new Workspace(1, "Open Space", 5.0),
-                new Workspace(2, "Private Desk", 8.0),
-                new Workspace(3, "Private Room", 20.0),
-                new Workspace(4, "Meeting Room", 30.0),
-                new Workspace(5, "Event Space", 50.0)
-        );
-        saveWorkspacesToFile(filePath, dummyWorkspaces);
+            System.out.println("State successfully saved to files.");
+        } catch (Exception e) {
+            System.err.println("Error saving state to file: " + e.getMessage());
+        }
     }
 }

@@ -1,25 +1,13 @@
 package com.example.coworking.service;
 
-import com.example.coworking.InvalidWorkspaceException;
-import com.example.coworking.model.Reservation;
-import com.example.coworking.model.Workspace;
-import com.example.coworking.util.Action;
-import com.example.coworking.util.PrintUtil;
-
+import com.example.coworking.util.DBUtil;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.*;
 
 public class AdminService {
-    private final List<Workspace> WORKSPACES;
-    private final Map<String, Integer> WORKSPACE_COUNTS;
-    private final List<Reservation> RESERVATIONS;
-    private int nextWorkspaceId;
-
-    public AdminService(List<Workspace> WORKSPACES, Map<String, Integer> WORKSPACE_COUNTS, List<Reservation> RESERVATIONS, int nextWorkspaceId) {
-        this.WORKSPACES = WORKSPACES;
-        this.WORKSPACE_COUNTS = WORKSPACE_COUNTS;
-        this.RESERVATIONS = RESERVATIONS;
-        this.nextWorkspaceId = nextWorkspaceId;
-    }
 
     public void addWorkspace(Scanner scanner) {
         System.out.print("Enter workspace type (Open Space/ Private Desk/ Private Room/ Meeting Room/ Event Space): ");
@@ -46,38 +34,76 @@ public class AdminService {
         int quantity = getValidatedIntInput(scanner);
         scanner.nextLine();
 
-        addWorkspaceToInventory(type, price, quantity);
-        System.out.println("Workspace added successfully!\n");
+        addWorkspacesToDB(type, price, quantity);
+        System.out.println("Workspace(s) added successfully!\n");
+    }
+
+    private void addWorkspacesToDB(String type, double price, int quantity) {
+        String query = "INSERT INTO workspaces (type, price) VALUES (?, ?)";
+        try (Connection connection = DBUtil.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(query)) {
+
+            for (int i = 0; i < quantity; i++) {
+                preparedStatement.setString(1, type);
+                preparedStatement.setDouble(2, price);
+                preparedStatement.executeUpdate();
+            }
+
+        } catch (SQLException e) {
+            System.err.println("Error adding workspaces to the database: " + e.getMessage());
+        }
     }
 
     public void removeWorkspace(Scanner scanner) {
         System.out.print("Enter the ID of the workspace to remove: ");
         int id = getValidatedIntInput(scanner);
 
-        Optional<Workspace> toRemove = WORKSPACES.stream()
-                .filter(workspace -> workspace.getId() == id)
-                .findFirst();
+        String query = "DELETE FROM workspaces WHERE id = ?";
+        try (Connection connection = DBUtil.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(query)) {
 
-        if (toRemove.isPresent()) {
-            WORKSPACES.remove(toRemove.get());
-            WORKSPACE_COUNTS.put(toRemove.get().getType(), WORKSPACE_COUNTS.get(toRemove.get().getType()) - 1);
-            System.out.println("Workspace removed successfully!");
-        } else {
-            System.out.println("Workspace ID not found.");
+            preparedStatement.setInt(1, id);
+            int rowsAffected = preparedStatement.executeUpdate();
+
+            if (rowsAffected > 0) {
+                System.out.println("Workspace removed successfully!");
+            } else {
+                System.out.println("Workspace ID not found.");
+            }
+
+        } catch (SQLException e) {
+            System.err.println("Error removing workspace from the database: " + e.getMessage());
         }
     }
 
     public void viewAllReservations() {
-        if (RESERVATIONS.isEmpty()) {
-            System.out.println("No reservations found.\n");
-        } else {
-            PrintUtil.printList(RESERVATIONS);
-            System.out.println();
-        }
-    }
+        String query = "SELECT r.id, r.workspace_id, r.type, r.customer_name, r.date, r.start_time, r.end_time, r.total_price, w.type AS workspace_type " +
+                "FROM reservations r " +
+                "JOIN workspaces w ON r.workspace_id = w.id";
+        try (Connection connection = DBUtil.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(query);
+             ResultSet resultSet = preparedStatement.executeQuery()) {
 
-    public void applyDiscount(Action<Workspace> action) {
-        WORKSPACES.forEach(action::apply);
+            if (!resultSet.isBeforeFirst()) {
+                System.out.println("No reservations found.");
+                return;
+            }
+
+            while (resultSet.next()) {
+                System.out.printf("Reservation ID: %d, Workspace ID: %d, Workspace Type: %s, Customer: %s, Date: %s, Start: %s, End: %s, Price: $%.2f%n",
+                        resultSet.getInt("id"),
+                        resultSet.getInt("workspace_id"),
+                        resultSet.getString("workspace_type"),
+                        resultSet.getString("customer_name"),
+                        resultSet.getDate("date"),
+                        resultSet.getTime("start_time"),
+                        resultSet.getTime("end_time"),
+                        resultSet.getDouble("total_price"));
+            }
+
+        } catch (SQLException e) {
+            System.err.println("Error retrieving reservations from the database: " + e.getMessage());
+        }
     }
 
     private int getValidatedIntInput(Scanner scanner) {
@@ -89,13 +115,6 @@ public class AdminService {
                 scanner.nextLine();
             }
         }
-    }
-
-    public void addWorkspaceToInventory(String type, double price, int quantity) {
-        for (int i = 0; i < quantity; i++) {
-            WORKSPACES.add(new Workspace(nextWorkspaceId++, type, price));
-        }
-        WORKSPACE_COUNTS.put(type, WORKSPACE_COUNTS.getOrDefault(type, 0) + quantity);
     }
 }
 
