@@ -7,7 +7,7 @@ import java.sql.SQLException;
 public class DatabaseInitializer {
 
     public static void initializeDatabase() {
-        try (Connection connection = DBUtil.getConnection()) {
+        try (Connection connection = DBUtil.getConnectionWithoutSchema()) {
             try (Statement statement = connection.createStatement()) {
 
                 String createSchemaQuery = "CREATE SCHEMA IF NOT EXISTS coworking_spaces";
