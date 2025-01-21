@@ -22,34 +22,6 @@ public class Reservation {
         this.totalPrice = totalPrice;
     }
 
-    public int getId() {
-        return id;
-    }
-
-    public int getWorkspaceId() {
-        return workspaceId;
-    }
-
-    public String getCustomerName() {
-        return customerName;
-    }
-
-    public String getType() {
-        return type;
-    }
-
-    public String getDate() {
-        return date;
-    }
-
-    public String getStartTime() {
-        return startTime;
-    }
-
-    public String getEndTime() {
-        return endTime;
-    }
-
     @Override
     public String toString() {
         return "Reservation: " +

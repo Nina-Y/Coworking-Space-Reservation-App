@@ -2,36 +2,29 @@ package com.example.coworking;
 
 import com.example.coworking.classLoader.CustomClassLoader;
 import com.example.coworking.io.FileUtil;
-import com.example.coworking.model.Reservation;
-import com.example.coworking.model.Workspace;
 import com.example.coworking.service.AdminService;
 import com.example.coworking.service.CustomerService;
-
+import com.example.coworking.util.DBUtil;
+import com.example.coworking.util.DatabaseInitializer;
 import java.util.*;
 
-public class  CoworkingSpaceApp {
-
-    private static final List<Workspace> WORKSPACES = new ArrayList<>();
-    private static final List<Reservation> RESERVATIONS = new ArrayList<>();
-    private static final Map<String, String> USER_CREDENTIALS = new HashMap<>();
-    private static final Map<String, Integer> WORKSPACE_COUNTS = new HashMap<>();
-    private static int nextWorkspaceId = 6;
-    private static int nextReservationId = 1;
+public class CoworkingSpaceApp {
     private static final String WORKSPACES_FILE = "src/main/java/com/example/coworking/io/workspaces.txt";
-    private static final double DISCOUNT = 0.9;
+    private static final String RESERVATIONS_FILE = "src/main/java/com/example/coworking/io/reservations.txt";
 
     public static void main(String[] args) {
-
         runCustomClassLoader();
+
+        DatabaseInitializer.initializeDatabase();
+
+        DBUtil.ensureWorkspacesPopulated();
+
+        DBUtil.initializeAdminUser();
 
         Scanner scanner = new Scanner(System.in);
 
-        USER_CREDENTIALS.put("admin", "admin123");
-
-        AdminService adminService = new AdminService(WORKSPACES, WORKSPACE_COUNTS, RESERVATIONS, nextWorkspaceId);
-        CustomerService customerService = new CustomerService(WORKSPACES, WORKSPACE_COUNTS, RESERVATIONS, nextReservationId);
-
-        FileUtil.loadWorkspacesFromFile(WORKSPACES, WORKSPACE_COUNTS, WORKSPACES_FILE);
+        AdminService adminService = new AdminService();
+        CustomerService customerService = new CustomerService();
 
         boolean isRunning = true;
         while (isRunning) {
@@ -67,10 +60,10 @@ public class  CoworkingSpaceApp {
                     registerCustomer(scanner);
                     break;
                 case 4:
-                    manageState(scanner);
+                    FileUtil.storeStateInFile(WORKSPACES_FILE, RESERVATIONS_FILE);
                     break;
                 case 5:
-                    FileUtil.saveWorkspacesToFile(WORKSPACES_FILE, WORKSPACES);
+                    FileUtil.storeStateInFile(WORKSPACES_FILE, RESERVATIONS_FILE);
                     System.out.println("Goodbye!");
                     isRunning = false;
                     break;
@@ -95,41 +88,13 @@ public class  CoworkingSpaceApp {
         }
     }
 
-    private static void manageState(Scanner scanner) {
-        System.out.println("""
-            \nState Menu
-            1. Save Current State (file)
-            2. View Current State (ArrayList)
-            3. Back to Main Menu
-            Choose an option:
-            """.trim());
-
-        int choice = getValidatedIntInput(scanner);
-        scanner.nextLine();
-
-        switch (choice) {
-            case 1 -> {
-                FileUtil.saveWorkspacesToFile(WORKSPACES_FILE, WORKSPACES);
-                System.out.println("Current state saved successfully!");
-            }
-            case 2 -> {
-                System.out.println("Current State of Workspaces:");
-                WORKSPACES.forEach(System.out::println);
-            }
-            case 3 -> System.out.println("Returning to Main Menu");
-            default -> System.out.println("Invalid choice. Please try again.");
-        }
-    }
-
     private static boolean login(Scanner scanner, String userType) {
         System.out.print("Enter username: ");
         String username = scanner.nextLine();
         System.out.print("Enter password: ");
         String password = scanner.nextLine();
 
-        return USER_CREDENTIALS.containsKey(username) && USER_CREDENTIALS.get(username).equals(password) &&
-                ((userType.equals("admin") && username.equals("admin")) ||
-                 (userType.equals("customer") && !username.equals("admin")));
+        return DBUtil.validateUser(username, password, userType);
     }
 
     private static void registerCustomer(Scanner scanner) {
@@ -140,32 +105,30 @@ public class  CoworkingSpaceApp {
             return;
         }
 
-        if (USER_CREDENTIALS.containsKey(username)) {
-            System.out.println("Username already exists. Please choose a different username.");
-            return;
-        }
-
         System.out.print("Enter a password (min 6 characters): ");
         String password = scanner.nextLine();
         if (password.length() < 6) {
             System.out.println("Password must be at least 6 characters long.");
             return;
         }
-        USER_CREDENTIALS.put(username, password);
-        System.out.println("Registration successful! You can now log in as a customer\n.");
+
+        if (DBUtil.registerUser(username, password)) {
+            System.out.println("Registration successful! You can now log in as a customer.\n");
+        } else {
+            System.out.println("Username already exists. Please choose a different username.\n");
+        }
     }
 
     private static void adminMenu(Scanner scanner, AdminService adminService) {
-        System.out.println("\nAdmin Menu");
 
         boolean isRunning = true;
         while (isRunning) {
             System.out.println("""
-                \n1. Add a new coworking space
+                \nAdmin Menu
+                1. Add a new coworking space
                 2. Remove a coworking space
                 3. View all RESERVATIONS
-                4. Set 10% discount for all spaces
-                5. Back to Main Menu
+                4. Back to Main Menu
                 Choose an option:
                 """.trim());
 
@@ -183,9 +146,6 @@ public class  CoworkingSpaceApp {
                     adminService.viewAllReservations();
                     break;
                 case 4:
-                    adminService.applyDiscount(workspace -> workspace.setPrice(workspace.getPrice() * DISCOUNT));
-                    break;
-                    case 5:
                     isRunning = false;
                     break;
                 default:
@@ -195,12 +155,11 @@ public class  CoworkingSpaceApp {
     }
 
     private static void customerMenu(Scanner scanner, CustomerService customerService) {
-        System.out.println("\nCustomer Menu");
-
         boolean isRunning = true;
         while (isRunning) {
             System.out.println("""
-                \n1. Browse available spaces
+                \nCustomer Menu
+                1. Browse available spaces
                 2. Make a reservation
                 3. View my RESERVATIONS
                 4. Cancel a reservation

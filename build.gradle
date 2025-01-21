@@ -17,6 +17,7 @@ repositories {
 dependencies {
     implementation 'org.junit.jupiter:junit-jupiter:5.11.0'
     testImplementation 'org.junit.jupiter:junit-jupiter:5.11.0'
+    implementation 'mysql:mysql-connector-java:8.0.33'
 }
 
 test {
