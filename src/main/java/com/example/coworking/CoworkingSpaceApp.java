@@ -5,7 +5,7 @@ import com.example.coworking.io.FileUtil;
 import com.example.coworking.service.AdminService;
 import com.example.coworking.service.CustomerService;
 import com.example.coworking.util.DBUtil;
-import com.example.coworking.util.DatabaseInitializer;
+
 import java.util.*;
 
 public class CoworkingSpaceApp {
@@ -14,8 +14,6 @@ public class CoworkingSpaceApp {
 
     public static void main(String[] args) {
         runCustomClassLoader();
-
-        DatabaseInitializer.initializeDatabase();
 
         DBUtil.ensureWorkspacesPopulated();
 
@@ -71,6 +69,8 @@ public class CoworkingSpaceApp {
                     System.out.println("Invalid choice. Please try again.");
             }
         }
+
+        DBUtil.closeSessionFactory();
     }
 
     public static void runCustomClassLoader() {

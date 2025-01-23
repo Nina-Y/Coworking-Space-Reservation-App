@@ -1,32 +1,32 @@
 package com.example.coworking.service;
 
+import com.example.coworking.model.Reservation;
+import com.example.coworking.model.Workspace;
 import com.example.coworking.util.DBUtil;
+import org.hibernate.Session;
+import org.hibernate.Transaction;
 
-import java.sql.*;
+import java.sql.Time;
 import java.time.LocalDate;
 import java.util.InputMismatchException;
+import java.util.List;
 import java.util.Scanner;
 
 public class CustomerService {
 
     public void browseSpaces() {
-        String query = "SELECT type, COUNT(*) AS available_count FROM workspaces " +
-                "WHERE id NOT IN (SELECT workspace_id FROM reservations) GROUP BY type";
-        try (Connection connection = DBUtil.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(query);
-             ResultSet resultSet = preparedStatement.executeQuery()) {
+        try (Session session = DBUtil.getSessionFactory().openSession()) {
+            List<Object[]> availableSpaces = session.createQuery(
+                    "SELECT w.type, COUNT(w) FROM Workspace w WHERE w.status = 'available' GROUP BY w.type", Object[].class
+            ).list();
 
-            System.out.println("\nAvailable Workspaces:");
-
-            if (!resultSet.isBeforeFirst()) {
+            if (availableSpaces.isEmpty()) {
                 System.out.println("No available workspaces at the moment.");
-                return;
+            } else {
+                System.out.println("\nAvailable Workspaces:");
+                availableSpaces.forEach(space -> System.out.printf("%s: %d available%n", space[0], space[1]));
             }
-
-            while (resultSet.next()) {
-                System.out.printf("%s: %d available%n", resultSet.getString("type"), resultSet.getInt("available_count"));
-            }
-        } catch (SQLException e) {
+        } catch (Exception e) {
             System.err.println("Error retrieving available workspaces: " + e.getMessage());
         }
     }
@@ -59,56 +59,34 @@ public class CustomerService {
             return;
         }
 
-        try (Connection connection = DBUtil.getConnection()) {
-            System.out.println("Database connection established.");
+        try (Session session = DBUtil.getSessionFactory().openSession()) {
+            Transaction transaction = session.beginTransaction();
 
-            String findWorkspaceQuery = "SELECT id, price FROM workspaces WHERE type = ? AND status = 'available' LIMIT 1";
-            int workspaceId = -1;
-            double pricePerHour = 0.0;
+            Workspace workspace = session.createQuery(
+                    "FROM Workspace w WHERE w.type = :type AND w.status = 'available'", Workspace.class
+            ).setParameter("type", type).setMaxResults(1).uniqueResult();
 
-            try (PreparedStatement preparedStatement = connection.prepareStatement(findWorkspaceQuery)) {
-                preparedStatement.setString(1, type);
-
-                try (ResultSet resultSet = preparedStatement.executeQuery()) {
-                    if (!resultSet.next()) {
-                        System.out.println("No available workspaces of the selected type.");
-                        return;
-                    }
-
-                    workspaceId = resultSet.getInt("id");
-                    pricePerHour = resultSet.getDouble("price");
-                }
-            }
-
-            if (workspaceId == -1) {
-                System.out.println("Workspace not found.");
+            if (workspace == null) {
+                System.out.println("No available workspaces of the selected type.");
                 return;
             }
 
+            double pricePerHour = workspace.getPrice();
             int durationHours = endHour - startHour;
             double totalPrice = durationHours * pricePerHour;
 
-            String insertReservationQuery = "INSERT INTO reservations (workspace_id, type, customer_name, date, start_time, end_time, total_price) " +
-                    "VALUES (?, ?, ?, ?, ?, ?, ?)";
+            Reservation reservation = new Reservation(
+                    workspace, type, customerName, date,
+                    Time.valueOf(String.format("%02d:00:00", startHour)),
+                    Time.valueOf(String.format("%02d:00:00", endHour)),
+                    totalPrice
+            );
+            session.save(reservation);
 
-            try (PreparedStatement insertStatement = connection.prepareStatement(insertReservationQuery)) {
-                insertStatement.setInt(1, workspaceId);
-                insertStatement.setString(2, type);
-                insertStatement.setString(3, customerName);
-                insertStatement.setDate(4, java.sql.Date.valueOf(date));
-                insertStatement.setTime(5, java.sql.Time.valueOf(String.format("%02d:00:00", startHour)));
-                insertStatement.setTime(6, java.sql.Time.valueOf(String.format("%02d:00:00", endHour)));
-                insertStatement.setDouble(7, totalPrice);
-                insertStatement.executeUpdate();
-                System.out.println("Reservation successfully added to the database.");
-            }
+            workspace.setStatus("reserved");
+            session.update(workspace);
 
-            String updateWorkspaceStatusQuery = "UPDATE workspaces SET status = 'reserved' WHERE id = ?";
-
-            try (PreparedStatement updateStatement = connection.prepareStatement(updateWorkspaceStatusQuery)) {
-                updateStatement.setInt(1, workspaceId);
-                updateStatement.executeUpdate();
-            }
+            transaction.commit();
 
             System.out.println("Reservation successful!");
             System.out.printf("You have reserved the space for %d hours. Total price: $%.2f%n", durationHours, totalPrice);
@@ -118,35 +96,20 @@ public class CustomerService {
     }
 
     public void viewCustomerReservations(String customerName) {
-        String query = "SELECT r.id, w.type AS workspace_type, r.date, r.start_time, r.end_time, r.total_price " +
-                "FROM reservations r " +
-                "JOIN workspaces w ON r.workspace_id = w.id " +
-                "WHERE r.customer_name = ?";
+        try (Session session = DBUtil.getSessionFactory().openSession()) {
+            List<Reservation> reservations = session.createQuery(
+                    "FROM Reservation r WHERE r.customerName = :customerName", Reservation.class
+            ).setParameter("customerName", customerName).list();
 
-        try (Connection connection = DBUtil.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(query)) {
-
-            preparedStatement.setString(1, customerName);
-            ResultSet resultSet = preparedStatement.executeQuery();
-
-            System.out.println("\nYour Reservations:");
-
-            if (!resultSet.isBeforeFirst()) {
-                System.out.println("No reservations found.");
-                return;
+            if (reservations.isEmpty()) {
+                System.out.println("No reservations found for " + customerName + ".");
+            } else {
+                System.out.println("\nReservations for " + customerName + ":");
+                for (Reservation reservation : reservations) {
+                    System.out.println(reservation);
+                }
             }
-
-            while (resultSet.next()) {
-                System.out.printf("Reservation ID: %d, Workspace Type: %s, Date: %s, Start: %s, End: %s, Price: $%.2f%n",
-                        resultSet.getInt("id"),
-                        resultSet.getString("workspace_type"),
-                        resultSet.getDate("date"),
-                        resultSet.getTime("start_time"),
-                        resultSet.getTime("end_time"),
-                        resultSet.getDouble("total_price"));
-            }
-
-        } catch (SQLException e) {
+        } catch (Exception e) {
             System.err.println("Error retrieving reservations: " + e.getMessage());
         }
     }
@@ -155,33 +118,21 @@ public class CustomerService {
         System.out.print("Enter reservation ID to cancel: ");
         int reservationId = getValidatedIntInput(scanner);
 
-        try (Connection connection = DBUtil.getConnection()) {
-            String findReservationQuery = "SELECT workspace_id FROM reservations WHERE id = ?";
-            int workspaceId;
+        try (Session session = DBUtil.getSessionFactory().openSession()) {
+            Transaction transaction = session.beginTransaction();
 
-            try (PreparedStatement findStatement = connection.prepareStatement(findReservationQuery)) {
-                findStatement.setInt(1, reservationId);
-                ResultSet resultSet = findStatement.executeQuery();
-
-                if (!resultSet.next()) {
-                    System.out.println("Reservation ID not found.");
-                    return;
-                }
-
-                workspaceId = resultSet.getInt("workspace_id");
+            Reservation reservation = session.get(Reservation.class, reservationId);
+            if (reservation == null) {
+                System.out.println("Reservation ID not found.");
+                return;
             }
 
-            String deleteReservationQuery = "DELETE FROM reservations WHERE id = ?";
-            try (PreparedStatement deleteStatement = connection.prepareStatement(deleteReservationQuery)) {
-                deleteStatement.setInt(1, reservationId);
-                deleteStatement.executeUpdate();
-            }
+            Workspace workspace = reservation.getWorkspaceId();
+            workspace.setStatus("available");
+            session.update(workspace);
 
-            String updateWorkspaceStatusQuery = "UPDATE workspaces SET status = 'available' WHERE id = ?";
-            try (PreparedStatement updateStatement = connection.prepareStatement(updateWorkspaceStatusQuery)) {
-                updateStatement.setInt(1, workspaceId);
-                updateStatement.executeUpdate();
-            }
+            session.delete(reservation);
+            transaction.commit();
 
             System.out.println("Reservation canceled, and workspace is now available.");
         } catch (Exception e) {
@@ -191,8 +142,7 @@ public class CustomerService {
 
     private boolean isValidDate(String date) {
         try {
-            LocalDate inputDate = LocalDate.parse(date);
-            return !inputDate.isBefore(LocalDate.now());
+            return !LocalDate.parse(date).isBefore(LocalDate.now());
         } catch (Exception e) {
             return false;
         }
@@ -209,4 +159,3 @@ public class CustomerService {
         }
     }
 }
-
