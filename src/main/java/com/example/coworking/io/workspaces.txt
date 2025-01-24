@@ -1,5 +1,0 @@
-1,Open Space,5.00,available
-2,Private Desk,8.00,available
-3,Private Room,20.00,available
-4,Meeting Room,30.00,available
-5,Event Space,50.00,reserved

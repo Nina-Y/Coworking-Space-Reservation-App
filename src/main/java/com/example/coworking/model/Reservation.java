@@ -3,7 +3,6 @@ package com.example.coworking.model;
 import jakarta.persistence.*;
 
 import java.sql.Time;
-import java.util.Date;
 
 @Entity
 @Table(name = "reservations")

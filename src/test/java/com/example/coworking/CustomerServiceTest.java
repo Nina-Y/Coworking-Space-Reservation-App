@@ -11,13 +11,13 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 public class CustomerServiceTest {
 
     @Test
-    void testBrowseSpaces() {
+    void whenBrowseSpaces_thenSuccess() {
         CustomerService customerService = new CustomerService();
         assertDoesNotThrow(customerService::browseSpaces);
     }
 
     @Test
-    void testMakeReservation() {
+    void givenValidInput_whenMakeReservation_thenSuccess() {
         String simulatedInput = "Alex\nOpen Space\n2025-01-30\n10\n12\n";
         ByteArrayInputStream inputStream = new ByteArrayInputStream(simulatedInput.getBytes());
         Scanner scanner = new Scanner(inputStream);
@@ -27,7 +27,7 @@ public class CustomerServiceTest {
     }
 
     @Test
-    void testCancelReservation() {
+    void givenValidInput_whenCancelReservation_thenSuccess() {
         String simulatedInput = "1\n";
         ByteArrayInputStream inputStream = new ByteArrayInputStream(simulatedInput.getBytes());
         Scanner scanner = new Scanner(inputStream);
@@ -37,7 +37,7 @@ public class CustomerServiceTest {
     }
 
     @Test
-    void testViewCustomerReservations() {
+    void givenCustomerName_whenViewReservations_thenSuccess() {
         CustomerService customerService = new CustomerService();
         assertDoesNotThrow(() -> customerService.viewCustomerReservations("Alex"));
     }
