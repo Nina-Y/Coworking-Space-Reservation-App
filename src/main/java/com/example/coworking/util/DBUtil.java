@@ -1,104 +1,109 @@
 package com.example.coworking.util;
 
 import com.example.coworking.model.Workspace;
+import com.example.coworking.model.Reservation;
+import com.example.coworking.model.User;
+import org.hibernate.SessionFactory;
+import org.hibernate.cfg.Configuration;
+import jakarta.persistence.EntityManagerFactory;
 
-import java.sql.*;
 import java.util.List;
 
 public class DBUtil {
 
-    private static final String DB_URL = "jdbc:mysql://localhost:3306";
-    private static final String DB_URL_WITH_SCHEMA = "jdbc:mysql://localhost:3306/coworking_spaces";
-    private static final String USER = "root";
-    private static final String PASSWORD = "code";
+    public static final SessionFactory sessionFactory;
 
-    public static Connection getConnection() throws SQLException {
-        return DriverManager.getConnection(DB_URL_WITH_SCHEMA, USER, PASSWORD);
+    static {
+        try {
+            sessionFactory = new Configuration()
+                    .configure("hibernate.cfg.xml")
+                    .addAnnotatedClass(Workspace.class)
+                    .addAnnotatedClass(Reservation.class)
+                    .addAnnotatedClass(User.class)
+                    .buildSessionFactory();
+        } catch (Throwable ex) {
+            throw new ExceptionInInitializerError("Failed to initialize Hibernate SessionFactory: " + ex.getMessage());
+        }
     }
 
-    public static Connection getConnectionWithoutSchema() throws SQLException {
-        return DriverManager.getConnection(DB_URL, USER, PASSWORD);
+    public static SessionFactory getSessionFactory() {
+        return sessionFactory;
+    }
+
+    public static void closeSessionFactory() {
+        if (sessionFactory != null && sessionFactory.isOpen()) {
+            sessionFactory.close();
+            System.out.println("Hibernate SessionFactory closed.");
+        }
     }
 
     public static void ensureWorkspacesPopulated() {
-        try (Connection connection = DBUtil.getConnection();
-             Statement statement = connection.createStatement();
-             ResultSet resultSet = statement.executeQuery("SELECT COUNT(*) AS count FROM workspaces")) {
-
-            if (resultSet.next() && resultSet.getInt("count") == 0) {
-                System.out.println("No workspaces found in database. Populating with dummy data.");
+        try (var session = sessionFactory.openSession()) {
+            var query = session.createQuery("SELECT COUNT(w) FROM Workspace w", Long.class);
+            Long count = query.uniqueResult();
+            if (count == null || count == 0) {
                 writeDummyDataToDatabase();
             }
-        } catch (SQLException e) {
-            System.err.println("Error checking workspaces in database: " + e.getMessage());
         }
     }
 
     public static void writeDummyDataToDatabase() {
-        List<Workspace> dummyWorkspaces = List.of(
-                new Workspace(1, "Open Space", 5.0),
-                new Workspace(2, "Private Desk", 8.0),
-                new Workspace(3, "Private Room", 20.0),
-                new Workspace(4, "Meeting Room", 30.0),
-                new Workspace(5, "Event Space", 50.0)
+        var dummyWorkspaces = List.of(
+                new Workspace("Open Space", 5.0, "available"),
+                new Workspace("Private Desk", 8.0, "available"),
+                new Workspace("Private Room", 20.0, "available"),
+                new Workspace("Meeting Room", 30.0, "available"),
+                new Workspace("Event Space", 50.0, "available")
         );
 
-        String query = "INSERT INTO workspaces (id, type, price) VALUES (?, ?, ?)";
-
-        try (Connection connection = DBUtil.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(query)) {
-
-            for (Workspace workspace : dummyWorkspaces) {
-                preparedStatement.setInt(1, workspace.getId());
-                preparedStatement.setString(2, workspace.getType());
-                preparedStatement.setDouble(3, workspace.getPrice());
-                preparedStatement.executeUpdate();
+        try (var session = sessionFactory.openSession()) {
+            var transaction = session.beginTransaction();
+            for (var workspace : dummyWorkspaces) {
+                session.save(workspace);
             }
-            System.out.println("Dummy data added to database.");
-        } catch (SQLException e) {
+            transaction.commit();
+            System.out.println("Dummy data added to the database.");
+        } catch (Exception e) {
             System.err.println("Error writing dummy data to database: " + e.getMessage());
         }
     }
 
     public static void initializeAdminUser() {
-        String query = "INSERT IGNORE INTO users (username, password) VALUES ('admin', 'admin123')";
-        try (Connection connection = DBUtil.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(query)) {
-            preparedStatement.executeUpdate();
-            System.out.println("Default admin user initialized.");
+        try (var session = sessionFactory.openSession()) {
+            var transaction = session.beginTransaction();
+            User admin = session.get(User.class, "admin");
+            if (admin == null) {
+                session.save(new User("admin", "admin123"));
+                System.out.println("Default admin user initialized.");
+            }
+            transaction.commit();
         } catch (Exception e) {
             System.err.println("Error initializing admin user: " + e.getMessage());
         }
     }
 
     public static boolean validateUser(String username, String password, String userType) {
-        String query = "SELECT password FROM users WHERE username = ?";
-        try (Connection connection = DBUtil.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(query)) {
-            preparedStatement.setString(1, username);
-            ResultSet resultSet = preparedStatement.executeQuery();
-
-            if (resultSet.next()) {
-                String storedPassword = resultSet.getString("password");
-                return storedPassword.equals(password) &&
-                        ((userType.equals("admin") && username.equals("admin")) ||
-                                (userType.equals("customer") && !username.equals("admin")));
+        try (var session = sessionFactory.openSession()) {
+            User user = session.get(User.class, username);
+            if (user != null && user.getPassword().equals(password)) {
+                return (userType.equals("admin") && username.equals("admin")) ||
+                        (userType.equals("customer") && !username.equals("admin"));
             }
         } catch (Exception e) {
-            System.err.println("Error during login: " + e.getMessage());
+            System.err.println("Error validating user: " + e.getMessage());
         }
         return false;
     }
 
     public static boolean registerUser(String username, String password) {
-        String query = "INSERT IGNORE INTO users (username, password) VALUES (?, ?)";
-        try (Connection connection = DBUtil.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(query)) {
-            preparedStatement.setString(1, username);
-            preparedStatement.setString(2, password);
-            int rowsAffected = preparedStatement.executeUpdate();
-
-            return rowsAffected > 0;
+        try (var session = sessionFactory.openSession()) {
+            var transaction = session.beginTransaction();
+            User existingUser = session.get(User.class, username);
+            if (existingUser == null) {
+                session.save(new User(username, password));
+                transaction.commit();
+                return true;
+            }
         } catch (Exception e) {
             System.err.println("Error registering user: " + e.getMessage());
         }

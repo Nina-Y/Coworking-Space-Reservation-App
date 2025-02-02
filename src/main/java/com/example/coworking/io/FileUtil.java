@@ -1,42 +1,39 @@
 package com.example.coworking.io;
 
+import com.example.coworking.model.Reservation;
+import com.example.coworking.model.Workspace;
 import com.example.coworking.util.DBUtil;
-import java.io.*;
-import java.sql.*;
+import org.hibernate.Session;
+
+import java.io.FileWriter;
+import java.io.PrintWriter;
+import java.util.List;
 
 public class FileUtil {
 
     public static void storeStateInFile(String workspacesFile, String reservationsFile) {
-        try (Connection connection = DBUtil.getConnection()) {
-            try (PreparedStatement workspacesStmt = connection.prepareStatement("SELECT id, type, price, status FROM workspaces");
-                 ResultSet workspacesRs = workspacesStmt.executeQuery();
-                 PrintWriter workspacesWriter = new PrintWriter(new FileWriter(workspacesFile))) {
+        try (Session session = DBUtil.getSessionFactory().openSession()) {
 
-                while (workspacesRs.next()) {
-                    int id = workspacesRs.getInt("id");
-                    String type = workspacesRs.getString("type");
-                    double price = workspacesRs.getDouble("price");
-                    String status = workspacesRs.getString("status");
-                    workspacesWriter.printf("%d,%s,%.2f,%s%n", id, type, price, status);
+            List<Workspace> workspaces = session.createQuery("FROM Workspace", Workspace.class).list();
+            try (PrintWriter workspacesWriter = new PrintWriter(new FileWriter(workspacesFile))) {
+                for (Workspace workspace : workspaces) {
+                    workspacesWriter.printf("%d,%s,%.2f,%s%n",
+                            workspace.getId(), workspace.getType(), workspace.getPrice(), workspace.getStatus());
                 }
             }
 
-            try (PreparedStatement reservationsStmt = connection.prepareStatement("SELECT * FROM reservations");
-                 ResultSet reservationsRs = reservationsStmt.executeQuery();
-                 PrintWriter reservationsWriter = new PrintWriter(new FileWriter(reservationsFile))) {
-
-                while (reservationsRs.next()) {
-                    int id = reservationsRs.getInt("id");
-                    int workspaceId = reservationsRs.getInt("workspace_id");
-                    String type = reservationsRs.getString("type");
-                    String customerName = reservationsRs.getString("customer_name");
-                    Date date = reservationsRs.getDate("date");
-                    Time startTime = reservationsRs.getTime("start_time");
-                    Time endTime = reservationsRs.getTime("end_time");
-                    double totalPrice = reservationsRs.getDouble("total_price");
-
+            List<Reservation> reservations = session.createQuery("FROM Reservation", Reservation.class).list();
+            try (PrintWriter reservationsWriter = new PrintWriter(new FileWriter(reservationsFile))) {
+                for (Reservation reservation : reservations) {
                     reservationsWriter.printf("%d,%d,%s,%s,%s,%s,%s,%.2f%n",
-                            id, workspaceId, type, customerName, date, startTime, endTime, totalPrice);
+                            reservation.getId(),
+                            reservation.getWorkspaceId().getId(),  // Fetch the ID of the associated workspace
+                            reservation.getType(),
+                            reservation.getCustomerName(),
+                            reservation.getDate(),
+                            reservation.getStartTime(),
+                            reservation.getEndTime(),
+                            reservation.getTotalPrice());
                 }
             }
 

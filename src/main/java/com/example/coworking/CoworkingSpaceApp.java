@@ -1,21 +1,16 @@
 package com.example.coworking;
 
 import com.example.coworking.classLoader.CustomClassLoader;
-import com.example.coworking.io.FileUtil;
 import com.example.coworking.service.AdminService;
 import com.example.coworking.service.CustomerService;
 import com.example.coworking.util.DBUtil;
-import com.example.coworking.util.DatabaseInitializer;
+
 import java.util.*;
 
 public class CoworkingSpaceApp {
-    private static final String WORKSPACES_FILE = "src/main/java/com/example/coworking/io/workspaces.txt";
-    private static final String RESERVATIONS_FILE = "src/main/java/com/example/coworking/io/reservations.txt";
 
     public static void main(String[] args) {
         runCustomClassLoader();
-
-        DatabaseInitializer.initializeDatabase();
 
         DBUtil.ensureWorkspacesPopulated();
 
@@ -32,9 +27,8 @@ public class CoworkingSpaceApp {
                 \nWelcome to Coworking Space Reservation App
                 1. Admin Login
                 2. Customer Login
-                3. Customer Registration
-                4. Store state in a file
-                5. Exit
+                3. Customer Registration        
+                4. Exit
                 Choose an option:
                 """.trim());
 
@@ -60,10 +54,6 @@ public class CoworkingSpaceApp {
                     registerCustomer(scanner);
                     break;
                 case 4:
-                    FileUtil.storeStateInFile(WORKSPACES_FILE, RESERVATIONS_FILE);
-                    break;
-                case 5:
-                    FileUtil.storeStateInFile(WORKSPACES_FILE, RESERVATIONS_FILE);
                     System.out.println("Goodbye!");
                     isRunning = false;
                     break;
@@ -71,6 +61,8 @@ public class CoworkingSpaceApp {
                     System.out.println("Invalid choice. Please try again.");
             }
         }
+
+        DBUtil.closeSessionFactory();
     }
 
     public static void runCustomClassLoader() {
